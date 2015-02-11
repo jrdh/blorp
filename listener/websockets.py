@@ -17,11 +17,21 @@ class WebSocketResponder:
         yield from sender.publish(self.back_channel, message)
 
 
-class WebSocketLoop:
+class WebSocketResponderFactory:
 
     def __init__(self, to_channel_prefix, back_channel_prefix):
         self.to_channel_prefix = to_channel_prefix
         self.back_channel_prefix = back_channel_prefix
+
+    def get_new_responder(self, websocket_id):
+        return WebSocketResponder(websocket_id, self.to_channel_prefix + websocket_id,
+                                  self.back_channel_prefix + websocket_id)
+
+
+class WebSocketLoop:
+
+    def __init__(self, factory):
+        self.factory = factory
         self.responders = {}
 
     @asyncio.coroutine
@@ -34,15 +44,16 @@ class WebSocketLoop:
         subscriber = yield from receiver.start_subscribe()
 
         # Subscribe to channel.
-        yield from subscriber.psubscribe(['{0}*'.format(self.to_channel_prefix)])
+        yield from subscriber.psubscribe(['{0}*'.format(self.factory.to_channel_prefix)])
+
+        to_prefix_length = len(self.factory.to_channel_prefix)
 
         # Inside a while loop, wait for incoming events.
         while True:
             message = yield from subscriber.next_published()
-            websocket_id = message.channel[len(self.to_channel_prefix):]
+            websocket_id = message.channel[to_prefix_length:]
             if websocket_id not in self.responders:
-                self.responders[websocket_id] = WebSocketResponder(websocket_id, self.to_channel_prefix + websocket_id,
-                                                                   self.back_channel_prefix + websocket_id)
+                self.responders[websocket_id] = self.factory.get_new_responder(websocket_id)
             yield from self.responders[websocket_id].on_message(message.value, sender)
 
         # When finished, close the connection.
@@ -51,6 +62,7 @@ class WebSocketLoop:
 
 
 if __name__ == '__main__':
-    websocket_loop = WebSocketLoop('ws:to:', 'ws:back:')
+    websocket_responder_factory = WebSocketResponderFactory('ws:to:', 'ws:back:')
+    websocket_loop = WebSocketLoop(websocket_responder_factory)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(websocket_loop.loop())
