@@ -21,7 +21,7 @@ io.on('connection', function (socket) {
 
     socket.on('some kind of message', function (data) {
         console.log("Message from websocket:", data, toKey);
-        sender.publish(toKey, data)
+        sender.publish(toKey, JSON.stringify(data))
     });
 
     socket.on('disconnect', function(){

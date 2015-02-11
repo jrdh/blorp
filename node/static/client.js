@@ -1,5 +1,6 @@
 $(document).ready(function() {
     var theButton = $('#theButton');
+    var objectButton = $('#objectButton');
     var theTextBox = $('#theTextBox');
     var socket = io();
 
@@ -14,5 +15,9 @@ $(document).ready(function() {
             return;
         }
         socket.emit('some kind of message', text);
+    });
+
+    objectButton.click(function() {
+        socket.emit('some kind of message', {'beans': true, 'lemons': 5});
     });
 });

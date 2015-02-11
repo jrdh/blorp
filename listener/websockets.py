@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import asyncio_redis
 
@@ -14,7 +15,10 @@ class WebSocketResponder:
     @asyncio.coroutine
     def on_message(self, message, sender):
         self.message_count += 1
-        yield from sender.publish(self.back_channel, message)
+        print('({0})[{1}]: {2}'.format(self.socket_id, self.message_count, message))
+        json_message = json.loads(message)
+        json_message['arms'] = 3289
+        yield from sender.publish(self.back_channel, json.dumps(json_message))
 
 
 class WebSocketResponderFactory:
