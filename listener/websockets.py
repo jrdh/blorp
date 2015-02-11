@@ -12,14 +12,14 @@ def example():
     subscriber = yield from receiver.start_subscribe()
 
     # Subscribe to channel.
-    yield from subscriber.psubscribe(['ws.to.*'])
+    yield from subscriber.psubscribe(['ws:to:*'])
 
     # Inside a while loop, wait for incoming events.
     while True:
         reply = yield from subscriber.next_published()
         print('Received: ', repr(reply.value), 'on channel', reply.channel, 'back channel',
-              reply.channel.replace('ws.to.', 'ws.back.'))
-        yield from sender.publish(reply.channel.replace('ws.to.', 'ws.back.'), 'Hello there!')
+              reply.channel.replace('ws:to:', 'ws:back:'))
+        yield from sender.publish(reply.channel.replace('ws:to:', 'ws:back:'), 'Hello there!')
 
     # When finished, close the connection.
     receiver.close()
