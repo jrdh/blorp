@@ -29,12 +29,11 @@ io.on('connection', function (socket) {
     });
 });
 
-
 receiver.on("pmessage", function (pattern, channel, message) {
     console.log("channel:", channel, "message:", message);
     var sock = io.sockets.connected[channel.substring(8)];
     if (sock) {
-        sock.emit("banana", "woop!");
+        sock.emit("banana", message);
     } else {
         console.log('user is disconnected?');
     }

@@ -1,5 +1,6 @@
 $(document).ready(function() {
     var theButton = $('#theButton');
+    var theTextBox = $('#theTextBox');
     var socket = io();
 
     socket.on('banana', function(msg){
@@ -7,6 +8,11 @@ $(document).ready(function() {
     });
 
     theButton.click(function() {
-        socket.emit('some kind of message', 'lemonade!');
+        var text = theTextBox.val();
+        if (!text) {
+            console.log("Not sending a blank message, fool!");
+            return;
+        }
+        socket.emit('some kind of message', text);
     });
 });
