@@ -5,8 +5,12 @@ var io = require('socket.io')(server);
 var path = require('path');
 var redis = require("redis");
 
+//for sending messages received from websockets to redis
 var sender = redis.createClient();
+//for receiving messages from redis so that they can then be sent to the websocket(s)
 var receiver = redis.createClient();
+//for sending messages about connecting and disconnecting websocket clients
+var connections = redis.createClient();
 
 
 app.use(express.static(path.join(__dirname, 'static')));
@@ -17,25 +21,24 @@ io.on('connection', function (socket) {
     var id = socket.conn.id;
     var toKey = "ws:to:" + id;
     var backKey = "ws:back:" + id;
-    console.log("connection from:", id, "toKey: ", toKey, "backKey: ", backKey);
+
+    connections.rpush('ws:connections', id);
 
     socket.on('some kind of message', function (data) {
-        console.log("Message from websocket:", data, toKey);
         sender.publish(toKey, JSON.stringify(data))
     });
 
     socket.on('disconnect', function(){
-        console.log('user disconnected');
+        connections.rpush('ws:disconnections', id);
     });
 });
 
 receiver.on("pmessage", function (pattern, channel, message) {
-    console.log("channel:", channel, "message:", message);
     var sock = io.sockets.connected[channel.substring(8)];
     if (sock) {
         sock.emit("banana", message);
     } else {
-        console.log('user is disconnected?');
+        connections.rpush('ws:disconnections', id);
     }
 });
 
