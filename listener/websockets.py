@@ -28,7 +28,7 @@ class WebSocketResponder:
         pass
 
     @asyncio.coroutine
-    def on_message(self, message, sender):
+    def on_message(self, event, data_type, message, sender):
         """
         Called when a message is received by the websocket this responder is attached to.
         :param message: the message that was sent to the server through the attached websocket
@@ -36,9 +36,15 @@ class WebSocketResponder:
         :return:
         """
         self.message_count += 1
-        json_message = json.loads(message)
-        json_message['beans'] = True
-        yield from sender.publish(self.back_channel, json.dumps(json_message))
+        if data_type == 'json':
+            json_message = json.loads(message)
+            json_message['parsed'] = True
+            response = json.dumps(json_message)
+        elif data_type == 'str':
+            response = "echo: {0}".format(message)
+        else:
+            response = 'Unrecognised data type :('
+        yield from sender.publish(self.back_channel, response)
 
 
 class WebSocketResponderFactory:
@@ -119,9 +125,12 @@ class WebSocketLoop:
 
         while self.run:
             message = yield from subscriber.next_published()
-            websocket_id = message.channel[to_prefix_length:]
+            descriptor = message.channel[to_prefix_length:].split(':')
+            websocket_id = descriptor[0]
+            event = descriptor[1]
+            data_type = descriptor[2]
             if websocket_id in self.responders:
-                yield from self.responders[websocket_id].on_message(message.value, message_sender)
+                yield from self.responders[websocket_id].on_message(event, data_type, message.value, message_sender)
         message_receiver.close()
         message_sender.close()
 

@@ -14,10 +14,10 @@ $(document).ready(function() {
             console.log("Not sending a blank message, fool!");
             return;
         }
-        socket.emit('some kind of message', text);
+        socket.emit('inputText', text);
     });
 
     objectButton.click(function() {
-        socket.emit('some kind of message', {'beans': true, 'lemons': 5});
+        socket.emit('randomJson', {'beans': true, 'lemons': 5});
     });
 });

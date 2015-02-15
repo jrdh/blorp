@@ -4,6 +4,10 @@ var server = require('http').Server(app);
 var io = require('socket.io')(server);
 var path = require('path');
 var redis = require("redis");
+var io_middleware = require('socketio-wildcard')();
+
+
+io.use(io_middleware);
 
 //for sending messages received from websockets to redis
 var sender = redis.createClient();
@@ -24,8 +28,21 @@ io.on('connection', function (socket) {
 
     connections.rpush('ws:connections', id);
 
-    socket.on('some kind of message', function (data) {
-        sender.publish(toKey, JSON.stringify(data))
+    socket.on('*', function (message) {
+        var event = message.data[0];
+        var data = message.data[1];
+        var key = toKey + ':' + event + ':';
+        switch (typeof data) {
+            case 'object':
+                key += 'json'
+                data = JSON.stringify(data);
+                break;
+            case 'string':
+            default:
+                key += 'str'
+                break;
+        }
+        sender.publish(key, data);
     });
 
     socket.on('disconnect', function(){
