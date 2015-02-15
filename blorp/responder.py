@@ -24,6 +24,10 @@ class Responder:
     def on_string(self, message, sender):
         yield from sender.emit(self.response_channel, 'something', "why hello there from string")
 
+    @register('toAll')
+    def on_string(self, message, sender):
+        yield from sender.emit_to_all('something', "{0} sent '{1}' to everyone!".format(self.websocket_id, message))
+
 
 class ResponderFactory:
 

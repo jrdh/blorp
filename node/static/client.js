@@ -1,6 +1,7 @@
 $(document).ready(function() {
     var theButton = $('#theButton');
     var objectButton = $('#objectButton');
+    var toAll = $('#toAll');
     var theTextBox = $('#theTextBox');
     var socket = io();
 
@@ -19,5 +20,9 @@ $(document).ready(function() {
 
     objectButton.click(function() {
         socket.emit('json', {'beans': true, 'lemons': 5});
+    });
+
+    toAll.click(function() {
+        socket.emit('toAll', "hey everyone!");
     });
 });

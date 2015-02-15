@@ -11,6 +11,7 @@ class AsyncSender:
     def create(cls):
         sender = cls()
         sender.back_channel_prefix = 'ws:back:'
+        sender.all_channel = 'ws:all'
         sender.message_sender = yield from asyncio_redis.Connection.create(host='localhost', port=6379)
         return sender
 
@@ -21,6 +22,10 @@ class AsyncSender:
     @asyncio.coroutine
     def emit_to(self, websocket_id, event, message):
         yield from self.emit(self.back_channel_prefix + websocket_id, event, message)
+
+    @asyncio.coroutine
+    def emit_to_all(self, event, message):
+        yield from self.emit(self.all_channel, event, message)
 
     def close(self):
         self.message_sender.close()

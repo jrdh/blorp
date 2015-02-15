@@ -15,6 +15,8 @@ var sender = redis.createClient();
 var receiver = redis.createClient();
 //for sending messages about connecting and disconnecting websocket clients
 var connections = redis.createClient();
+//for receiving messages that are meant to go to all clients
+var all_receiver = redis.createClient();
 
 
 app.use(express.static(path.join(__dirname, 'static')));
@@ -53,4 +55,10 @@ receiver.on("pmessage", function (pattern, channel, message) {
     }
 });
 
+all_receiver.on("message", function (channel, message) {
+    message = JSON.parse(message);
+    io.emit(message['event'], message['data']);
+});
+
 receiver.psubscribe('ws:back:*');
+all_receiver.subscribe('ws:all');
