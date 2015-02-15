@@ -3,8 +3,9 @@ A 'bridge' that allows socket.io websocket connections to be used from (currentl
 Uses redis' pubsub system and Python's asyncio module.
 
 ## Todo
-- python on_message refactor to allow registration of functions to websocket events
+- allow sending of data from python to the websocket client on events other than 'banana'...
+- allow sending of data from python to all websockets
 
 
 ## To think about...
-- work out how to do cope with balancing
+- work out how to do cope with load balancing
