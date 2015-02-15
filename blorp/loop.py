@@ -1,6 +1,29 @@
 import asyncio
+import json
 
 import asyncio_redis
+
+
+class AsyncSender:
+
+    @classmethod
+    @asyncio.coroutine
+    def create(cls):
+        sender = cls()
+        sender.back_channel_prefix = 'ws:back:'
+        sender.message_sender = yield from asyncio_redis.Connection.create(host='localhost', port=6379)
+        return sender
+
+    @asyncio.coroutine
+    def emit(self, channel, event, message):
+        yield from self.message_sender.publish(channel, json.dumps({'event': event, 'data': message}))
+
+    @asyncio.coroutine
+    def emit_to(self, websocket_id, event, message):
+        yield from self.emit(self.back_channel_prefix + websocket_id, event, message)
+
+    def close(self):
+        self.message_sender.close()
 
 
 class ResponderLoop:
@@ -35,7 +58,7 @@ class ResponderLoop:
     @asyncio.coroutine
     def message_loop(self):
         message_receiver = yield from asyncio_redis.Connection.create(host='localhost', port=6379)
-        message_sender = yield from asyncio_redis.Connection.create(host='localhost', port=6379)
+        message_sender = yield from AsyncSender.create()
 
         subscriber = yield from message_receiver.start_subscribe()
         yield from subscriber.psubscribe(['{0}*'.format(self.to_channel_prefix)])

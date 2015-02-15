@@ -4,7 +4,7 @@ $(document).ready(function() {
     var theTextBox = $('#theTextBox');
     var socket = io();
 
-    socket.on('banana', function(msg){
+    socket.on('something', function(msg){
         console.log('message: ' + msg);
     });
 

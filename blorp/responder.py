@@ -1,4 +1,6 @@
 import asyncio
+from functools import partial
+import json
 
 from blorp import register, json_message
 
@@ -16,11 +18,11 @@ class Responder:
     @register('json')
     @json_message
     def on_json(self, message, sender):
-        yield from sender.publish(self.response_channel, "why hello there from json")
+        yield from sender.emit(self.response_channel, 'something', "why hello there from json")
 
     @register('string')
     def on_string(self, message, sender):
-        yield from sender.publish(self.response_channel, "why hello there from string")
+        yield from sender.emit(self.response_channel, 'something', "why hello there from string")
 
 
 class ResponderFactory:

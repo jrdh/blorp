@@ -19,7 +19,7 @@ var connections = redis.createClient();
 
 app.use(express.static(path.join(__dirname, 'static')));
 
-server.listen(3000);
+server.listen(3002);
 
 io.on('connection', function (socket) {
     var id = socket.conn.id;
@@ -45,8 +45,9 @@ io.on('connection', function (socket) {
 
 receiver.on("pmessage", function (pattern, channel, message) {
     var sock = io.sockets.connected[channel.substring(8)];
+    message = JSON.parse(message);
     if (sock) {
-        sock.emit("banana", message);
+        sock.emit(message['event'], message['data']);
     } else {
         connections.rpush('ws:disconnections', id);
     }
