@@ -31,16 +31,9 @@ io.on('connection', function (socket) {
     socket.on('*', function (message) {
         var event = message.data[0];
         var data = message.data[1];
-        var key = toKey + ':' + event + ':';
-        switch (typeof data) {
-            case 'object':
-                key += 'json'
-                data = JSON.stringify(data);
-                break;
-            case 'string':
-            default:
-                key += 'str'
-                break;
+        var key = toKey + ':' + event;
+        if (typeof data === 'object') {
+            data = JSON.stringify(data);
         }
         sender.publish(key, data);
     });
