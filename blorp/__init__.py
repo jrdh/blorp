@@ -1,44 +1,33 @@
 import asyncio
-import json
-import re
+import threading
 
 
-default_namespace = 'default'
-_message_responders = {}
-
-
-def register(event_regex, namespace=default_namespace, re_flags=0):
-    def wrap(f):
-        if namespace not in _message_responders:
-            _message_responders[namespace] = {}
-        _message_responders[namespace][re.compile(event_regex, re_flags)] = f
-
-        @asyncio.coroutine
-        def wrapped_f(*args):
-            f(*args)
-        return wrapped_f
-    return wrap
-
-
-def json_message(on_message_function):
-    def _wrapped_on_message_function(responder_instance, message, sender):
-        return on_message_function(responder_instance, json.loads(message), sender)
-    return _wrapped_on_message_function
+websockets = set()
+event_handlers = {}
+to_channel_prefix = 'blorp:to:'
+back_channel_prefix = 'blorp:back:'
+all_channel = 'blorp:all'
 
 
 from blorp.loop import ResponderLoop
 from blorp.responder import ResponderFactory, ResponderRouter
 
 
-def start(router=ResponderRouter, factory=ResponderFactory, namespace=default_namespace, event_loop=None,
-          run_forever=True):
-    to_channel_prefix = 'ws:to:'
-    back_channel_prefix = 'ws:back:'
-    factory_instance = factory()
-    router_instance = router(factory_instance, _message_responders[namespace], back_channel_prefix)
-    websocket_loop = ResponderLoop(router_instance, to_channel_prefix, back_channel_prefix)
+def start(router_cls=ResponderRouter, factory_cls=ResponderFactory, event_loop=None):
+    factory = factory_cls()
+    router = router_cls(factory, event_handlers)
+    websocket_loop = ResponderLoop(router)
     if not event_loop:
         event_loop = asyncio.get_event_loop()
+    asyncio.set_event_loop(event_loop)
     websocket_loop.start(event_loop=event_loop)
-    if run_forever:
-        event_loop.run_forever()
+    event_loop.run_forever()
+
+
+def start_in_new_thread(event_loop=None, **kwargs):
+    if not event_loop:
+        event_loop = asyncio.get_event_loop()
+    kwargs.update({'event_loop': event_loop})
+    t = threading.Thread(target=start, kwargs=kwargs)
+    t.start()
+    return t, event_loop

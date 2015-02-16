@@ -3,10 +3,10 @@ A 'bridge' that allows socket.io websocket connections to be used from (currentl
 Uses redis' pubsub system and Python's asyncio module.
 
 ## Todo
-- send to websockets from outside event loop
 - call blocking functions from registered on_* callbacks
-- tidy
+- tidy (~)
 - tests
+- threadsafety of blorp.websockets set (in fact of most of it)
 
 ## To think about...
 - work out how to do cope with load balancing
