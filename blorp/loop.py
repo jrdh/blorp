@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import asyncio_redis
 import blorp
@@ -12,7 +13,6 @@ class ResponderLoop:
 
     def start(self, event_loop=None):
         asyncio.async(self.connection_loop(), loop=event_loop)
-        asyncio.async(self.disconnection_loop(), loop=event_loop)
         asyncio.async(self.message_loop(), loop=event_loop)
 
     @asyncio.coroutine
@@ -20,16 +20,12 @@ class ResponderLoop:
         connection_receiver = yield from asyncio_redis.Connection.create()
         while self.run:
             message = yield from connection_receiver.blpop(['blorp:connections'])
-            yield from self.router.add_responder(message.value)
+            json_message = json.loads(message.value)
+            if 'connect' in json_message and json_message['connect']:
+                yield from self.router.add_responder(json_message['id'])
+            elif 'disconnect' in json_message and json_message['disconnect']:
+                yield from self.router.remove_responder(json_message['id'])
         connection_receiver.close()
-
-    @asyncio.coroutine
-    def disconnection_loop(self):
-        disconnection_receiver = yield from asyncio_redis.Connection.create()
-        while self.run:
-            message = yield from disconnection_receiver.blpop(['blorp:disconnections'])
-            yield from self.router.remove_responder(message.value)
-        disconnection_receiver.close()
 
     @asyncio.coroutine
     def message_loop(self):

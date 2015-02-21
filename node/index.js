@@ -23,19 +23,25 @@ var to_channel_prefix = 'blorp:to:';
 var back_channel_prefix = 'blorp:back:';
 var all_channel = 'blorp:all';
 var connections_key = 'blorp:connections';
-var disconnections_key = 'blorp:disconnections';
 
 
 app.use(express.static(path.join(__dirname, 'static')));
 server.listen(3002);
 
+var connectClient = function(websocketId) {
+    connections.rpush(connections_key, JSON.stringify({'id': websocketId, 'connect': true}));
+}
+
+var disconnectClient = function(websocketId) {
+    connections.rpush(connections_key, JSON.stringify({'id': websocketId, 'disconnect': true}));
+}
 
 io.on('connection', function (socket) {
     var id = socket.conn.id;
     var toKey = to_channel_prefix + id;
     var backKey = back_channel_prefix + id;
 
-    connections.rpush(connections_key, id);
+    connectClient(id);
 
     socket.on('*', function (message) {
         var event = message.data[0];
@@ -48,7 +54,7 @@ io.on('connection', function (socket) {
     });
 
     socket.on('disconnect', function(){
-        connections.rpush(disconnections_key, id);
+        disconnectClient(id);
     });
 });
 
@@ -59,7 +65,7 @@ receiver.on("pmessage", function (pattern, channel, message) {
     if (sock) {
         sock.emit(message['event'], message['data']);
     } else {
-        connections.rpush(disconnections_key, id);
+        disconnectClient(id);
     }
 });
 
