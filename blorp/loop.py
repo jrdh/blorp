@@ -10,9 +10,11 @@ class ResponderLoop:
     def __init__(self, router):
         self.router = router
         self.run = True
+        self.event_loop = None
 
     def start(self, event_loop=None):
-        asyncio.async(self.message_loop(), loop=event_loop)
+        self.event_loop = event_loop
+        asyncio.async(self.message_loop(), loop=self.event_loop)
 
     @asyncio.coroutine
     def message_loop(self):
@@ -27,6 +29,6 @@ class ResponderLoop:
         while self.run:
             raw_message = yield from message_receiver.blpop([blorp.to_queue])
             message = json.loads(raw_message.value)
-            yield from message_handlers[message['type']](message)
+            asyncio.async(message_handlers[message['type']](message), loop=self.event_loop)
 
         message_receiver.close()

@@ -63,3 +63,9 @@ class AsyncSender:
 
     def close(self):
         self.message_sender.close()
+
+
+@asyncio.coroutine
+def call_blocking(f, *args):
+    return_value = yield from asyncio.get_event_loop().run_in_executor(None, f, *args)
+    return return_value

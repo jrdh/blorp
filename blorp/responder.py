@@ -10,6 +10,10 @@ class Responder:
         self.websocket_id = websocket_id
 
     @asyncio.coroutine
+    def on_connection(self):
+        pass
+
+    @asyncio.coroutine
     def on_disconnection(self):
         pass
 
@@ -29,8 +33,11 @@ class Responder:
 
 class ResponderFactory:
 
+    @asyncio.coroutine
     def get_new_responder(self, websocket_id):
-        return Responder(websocket_id)
+        responder = Responder(websocket_id)
+        yield from responder.on_connection()
+        return responder
 
 
 class ResponderRouter:
@@ -44,7 +51,7 @@ class ResponderRouter:
     @asyncio.coroutine
     def add_responder(self, websocket_id):
         blorp.websockets.add(websocket_id)
-        self.responders[websocket_id] = self.factory.get_new_responder(websocket_id)
+        self.responders[websocket_id] = yield from self.factory.get_new_responder(websocket_id)
 
     @asyncio.coroutine
     def remove_responder(self, websocket_id):
