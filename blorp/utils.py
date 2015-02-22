@@ -11,7 +11,7 @@ import blorp
 blocking_redis = redis.StrictRedis()
 
 
-def register(event_regex, re_flags=0):
+def on(event_regex, re_flags=0):
     def wrap(f):
         blorp.event_handlers[re.compile(event_regex, re_flags)] = f
 

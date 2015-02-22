@@ -1,7 +1,7 @@
 import asyncio
 
 import blorp
-from blorp.utils import register, json_message, AsyncSender
+from blorp.utils import on, json_message, AsyncSender
 
 
 class Responder:
@@ -13,16 +13,16 @@ class Responder:
     def on_disconnection(self):
         pass
 
-    @register('json')
+    @on('json')
     @json_message
     def on_json(self, message, sender):
         yield from sender.emit(self.websocket_id, 'something', "why hello there from json")
 
-    @register('string')
+    @on('string')
     def on_string(self, message, sender):
         yield from sender.emit(self.websocket_id, 'something', "why hello there from string")
 
-    @register('toAll')
+    @on('toAll')
     def on_string(self, message, sender):
         yield from sender.emit_to_all('something', "{0} sent '{1}' to everyone!".format(self.websocket_id, message))
 
