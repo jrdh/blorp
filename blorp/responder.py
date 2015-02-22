@@ -32,7 +32,7 @@ class Responder:
         yield from sender.emit(self.websocket_id, 'something', "why hello there from string")
 
     @on('toAll')
-    def on_string(self, message, sender):
+    def on_to_all(self, message, sender):
         yield from sender.emit_to_all('something', "{0} sent '{1}' to everyone!".format(self.websocket_id, message))
 
 
@@ -47,9 +47,9 @@ class ResponderFactory:
 
 class ResponderRouter:
 
-    def __init__(self, factory, event_dict):
+    def __init__(self, factory, event_handlers):
         self.factory = factory
-        self.event_dict = event_dict
+        self.event_handlers = event_handlers
         self.responders = {}
         self.async_sender = None
 
@@ -69,7 +69,7 @@ class ResponderRouter:
     def route(self, websocket_id, event, data):
         if not self.async_sender:
             self.async_sender = yield from AsyncSender.create()
-        for regex, on_message_function in self.event_dict.items():
+        for regex, on_message_function in self.event_handlers:
             if regex.match(event) and websocket_id in self.responders:
                 responder = self.responders[websocket_id]
                 if on_message_function.in_order:
@@ -78,6 +78,7 @@ class ResponderRouter:
                 else:
                     # run responder immediately
                     asyncio.async(on_message_function(responder, data, self.async_sender))
+                break
 
     def close(self):
         self.async_sender.close()

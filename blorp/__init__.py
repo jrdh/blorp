@@ -1,25 +1,27 @@
 import asyncio
 import threading
-
+import inspect
 
 websockets = set()
-event_handlers = {}
 to_queue = 'blorp:to'
 back_queue = 'blorp:back'
 
 
 from blorp.loop import ResponderLoop
-from blorp.responder import ResponderFactory, ResponderRouter
+from blorp.responder import ResponderFactory, ResponderRouter, Responder
 
 
-def start(router_cls=ResponderRouter, factory_cls=ResponderFactory, event_loop=None):
+def start(router_cls=ResponderRouter, factory_cls=ResponderFactory, responder_cls=Responder, event_loop=None):
     """
     Starts the websocket listening service with the given optional parameters. The event loop is started on the current
     thread.
     :param router_cls: the class to instantiate for the router object (optional)
     :param factory_cls: the class to instantiate for the factory object (optional)
+    :param responder_cls: the class to find the event handler functions on (optional)
     :param event_loop: the event loop to use (optional)
     """
+    predicate = lambda method: inspect.isfunction(method) and hasattr(method, 'handler') and method.handler
+    event_handlers = [(func.event_regex, func.original) for _, func in inspect.getmembers(responder_cls, predicate)]
     factory = factory_cls()
     router = router_cls(factory, event_handlers)
     websocket_loop = ResponderLoop(router)
