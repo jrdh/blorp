@@ -11,8 +11,9 @@ import blorp
 blocking_redis = redis.StrictRedis()
 
 
-def on(event_regex, re_flags=0):
+def on(event_regex, re_flags=0, ordered=True):
     def wrap(f):
+        f.in_order = ordered
         blorp.event_handlers[re.compile(event_regex, re_flags)] = f
 
         @asyncio.coroutine

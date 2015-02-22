@@ -22,7 +22,7 @@ class Responder:
     def on_disconnection(self):
         self.go = False
 
-    @on('json')
+    @on('json', ordered=False)
     @json_message
     def on_json(self, message, sender):
         yield from sender.emit(self.websocket_id, 'something', "why hello there from json")
@@ -72,7 +72,12 @@ class ResponderRouter:
         for regex, on_message_function in self.event_dict.items():
             if regex.match(event) and websocket_id in self.responders:
                 responder = self.responders[websocket_id]
-                yield from responder.response_queue.put((on_message_function, data, self.async_sender))
+                if on_message_function.in_order:
+                    # add to message queue for that websocket responder
+                    yield from responder.response_queue.put((on_message_function, data, self.async_sender))
+                else:
+                    # run responder immediately
+                    asyncio.async(on_message_function(responder, data, self.async_sender))
 
     def close(self):
         self.async_sender.close()
