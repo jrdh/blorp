@@ -3,7 +3,6 @@ A 'bridge' that allows socket.io websocket connections to be used from (currentl
 Uses redis and Python's asyncio module.
 
 ## Todo
-- call blocking functions from registered on_* callbacks
 - tidy (~)
 - tests
 - threadsafety of blorp.websockets set (in fact most of it)

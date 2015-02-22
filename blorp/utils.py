@@ -68,5 +68,4 @@ class AsyncSender:
 
 @asyncio.coroutine
 def call_blocking(f, *args):
-    return_value = yield from asyncio.get_event_loop().run_in_executor(None, f, *args)
-    return return_value
+    return (yield from asyncio.get_event_loop().run_in_executor(None, f, *args))
