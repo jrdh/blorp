@@ -1,27 +1,35 @@
 import asyncio
 
 import blorp
-from blorp.utils import on, json_message, AsyncSender, channel_for
+from blorp.utils import on, json_message, AsyncSender
 
 
 class Responder:
 
-    def __init__(self, websocket_id, response_channel):
+    def __init__(self, websocket_id):
         self.websocket_id = websocket_id
-        self.response_channel = response_channel
+        self.response_queue = asyncio.Queue()
+        self.go = False
+
+    @asyncio.coroutine
+    def on_connection(self):
+        self.go = True
+        while self.go:
+            on_message_function, data, async_sender = yield from self.response_queue.get()
+            yield from on_message_function(self, data, async_sender)
 
     @asyncio.coroutine
     def on_disconnection(self):
-        pass
+        self.go = False
 
-    @on('json')
+    @on('json', ordered=False)
     @json_message
     def on_json(self, message, sender):
-        yield from sender.emit(self.response_channel, 'something', "why hello there from json")
+        yield from sender.emit(self.websocket_id, 'something', "why hello there from json")
 
     @on('string')
     def on_string(self, message, sender):
-        yield from sender.emit(self.response_channel, 'something', "why hello there from string")
+        yield from sender.emit(self.websocket_id, 'something', "why hello there from string")
 
     @on('toAll')
     def on_string(self, message, sender):
@@ -30,8 +38,11 @@ class Responder:
 
 class ResponderFactory:
 
-    def get_new_responder(self, websocket_id, response_channel):
-        return Responder(websocket_id, response_channel)
+    @asyncio.coroutine
+    def get_new_responder(self, websocket_id):
+        responder = Responder(websocket_id)
+        asyncio.async(responder.on_connection())
+        return responder
 
 
 class ResponderRouter:
@@ -45,7 +56,7 @@ class ResponderRouter:
     @asyncio.coroutine
     def add_responder(self, websocket_id):
         blorp.websockets.add(websocket_id)
-        self.responders[websocket_id] = self.factory.get_new_responder(websocket_id, channel_for(websocket_id))
+        self.responders[websocket_id] = yield from self.factory.get_new_responder(websocket_id)
 
     @asyncio.coroutine
     def remove_responder(self, websocket_id):
@@ -60,7 +71,13 @@ class ResponderRouter:
             self.async_sender = yield from AsyncSender.create()
         for regex, on_message_function in self.event_dict.items():
             if regex.match(event) and websocket_id in self.responders:
-                yield from on_message_function(self.responders[websocket_id], data, self.async_sender)
+                responder = self.responders[websocket_id]
+                if on_message_function.in_order:
+                    # add to message queue for that websocket responder
+                    yield from responder.response_queue.put((on_message_function, data, self.async_sender))
+                else:
+                    # run responder immediately
+                    asyncio.async(on_message_function(responder, data, self.async_sender))
 
     def close(self):
         self.async_sender.close()
