@@ -9,4 +9,4 @@ Uses redis' pubsub system and Python's asyncio module.
 - threadsafety of blorp.websockets set (in fact most of it)
 
 ## To think about...
-- work out how to do cope with load balancing
+- work out how to do cope with load balancing (this is now way more possible with a queue rather than using redis' pubsub)
