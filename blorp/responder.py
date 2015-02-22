@@ -8,14 +8,19 @@ class Responder:
 
     def __init__(self, websocket_id):
         self.websocket_id = websocket_id
+        self.response_queue = asyncio.Queue()
+        self.go = False
 
     @asyncio.coroutine
     def on_connection(self):
-        pass
+        self.go = True
+        while self.go:
+            on_message_function, data, async_sender = yield from self.response_queue.get()
+            yield from on_message_function(self, data, async_sender)
 
     @asyncio.coroutine
     def on_disconnection(self):
-        pass
+        self.go = False
 
     @on('json')
     @json_message
@@ -36,7 +41,7 @@ class ResponderFactory:
     @asyncio.coroutine
     def get_new_responder(self, websocket_id):
         responder = Responder(websocket_id)
-        yield from responder.on_connection()
+        asyncio.async(responder.on_connection())
         return responder
 
 
@@ -66,7 +71,8 @@ class ResponderRouter:
             self.async_sender = yield from AsyncSender.create()
         for regex, on_message_function in self.event_dict.items():
             if regex.match(event) and websocket_id in self.responders:
-                yield from on_message_function(self.responders[websocket_id], data, self.async_sender)
+                responder = self.responders[websocket_id]
+                yield from responder.response_queue.put((on_message_function, data, self.async_sender))
 
     def close(self):
         self.async_sender.close()

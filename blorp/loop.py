@@ -29,6 +29,6 @@ class ResponderLoop:
         while self.run:
             raw_message = yield from message_receiver.blpop([blorp.to_queue])
             message = json.loads(raw_message.value)
-            asyncio.async(message_handlers[message['type']](message), loop=self.event_loop)
+            yield from message_handlers[message['type']](message)
 
         message_receiver.close()
