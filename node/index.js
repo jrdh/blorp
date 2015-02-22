@@ -13,44 +13,48 @@ io.use(io_middleware);
 var sender = redis.createClient();
 //for receiving messages from redis so that they can then be sent to the websocket(s)
 var receiver = redis.createClient();
-//for sending messages about connecting and disconnecting websocket clients
-var connections = redis.createClient();
-//for receiving messages that are meant to go to all clients
-var all_receiver = redis.createClient();
 
-//channel/queue names
-var to_channel_prefix = 'blorp:to:';
-var back_channel_prefix = 'blorp:back:';
-var all_channel = 'blorp:all';
-var connections_key = 'blorp:connections';
+
+//queue names
+var queues = {
+    to: 'blorp:to',
+    back: 'blorp:back',
+};
+
+//message types
+var types = {
+    connection: 'connection',
+    disconnection: 'disconnection',
+    message: 'message'
+};
 
 
 app.use(express.static(path.join(__dirname, 'static')));
-server.listen(3002);
+server.listen(3003);
 
-var connectClient = function(websocketId) {
-    connections.rpush(connections_key, JSON.stringify({'id': websocketId, 'connect': true}));
-}
 
-var disconnectClient = function(websocketId) {
-    connections.rpush(connections_key, JSON.stringify({'id': websocketId, 'disconnect': true}));
-}
+function connectClient(websocketId) {
+    sender.rpush(queues.to, JSON.stringify({'type': types.connection, 'websocketId': websocketId}));
+};
+
+function disconnectClient(websocketId) {
+    sender.rpush(queues.to, JSON.stringify({'type': types.disconnection, 'websocketId': websocketId}));
+};
+
+function sendMessage(websocketId, event, data) {
+    if (typeof data === 'object') {
+        data = JSON.stringify(data);
+    }
+    sender.rpush(queues.to, JSON.stringify({'type': types.message, 'event': event, 'data': data, 'websocketId': websocketId}));
+};
 
 io.on('connection', function (socket) {
     var id = socket.conn.id;
-    var toKey = to_channel_prefix + id;
-    var backKey = back_channel_prefix + id;
 
     connectClient(id);
 
     socket.on('*', function (message) {
-        var event = message.data[0];
-        var data = message.data[1];
-        var key = toKey + ':' + event;
-        if (typeof data === 'object') {
-            data = JSON.stringify(data);
-        }
-        sender.publish(key, data);
+        sendMessage(id, message.data[0], message.data[1]);
     });
 
     socket.on('disconnect', function(){
@@ -58,21 +62,25 @@ io.on('connection', function (socket) {
     });
 });
 
-receiver.on("pmessage", function (pattern, channel, message) {
-    var id = channel.substring(back_channel_prefix.length);
-    var sock = io.sockets.connected[id];
-    message = JSON.parse(message);
-    if (sock) {
-        sock.emit(message['event'], message['data']);
-    } else {
-        disconnectClient(id);
-    }
-});
+function listen() {
+    receiver.blpop(queues.back, 0, function(err, data) {
+        var message = JSON.parse(data[1]);
+        var id = message['id'];
+        if (id) {
+            var sock = io.sockets.connected[id];
+            if (sock) {
+                sock.emit(message['event'], message['data']);
+            } else {
+                disconnectClient(id);
+            }
+        } else {
+            io.emit(message['event'], message['data']);
+        }
+        process.nextTick(function() {
+            listen();
+        });
+    });
+};
 
-all_receiver.on("message", function (channel, message) {
-    message = JSON.parse(message);
-    io.emit(message['event'], message['data']);
-});
 
-receiver.psubscribe(back_channel_prefix + '*');
-all_receiver.subscribe(all_channel);
+listen();

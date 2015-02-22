@@ -1,5 +1,5 @@
 import blorp
-from blorp.utils import emit_to_all, emit_to
+from blorp.utils import emit_to_all
 
 
 if __name__ == '__main__':
@@ -8,5 +8,5 @@ if __name__ == '__main__':
     while True:
         text = input("Type something to say to the nice websockets: ")
         emit_to_all('something', text)
-        for websocket_id in blorp.websockets:
-            emit_to(websocket_id, 'something', 'sending something to each individually :) {0}'.format(text))
+        # for websocket_id in blorp.websockets:
+        #     emit_to(websocket_id, 'something', 'sending something to each individually :) {0}'.format(text))

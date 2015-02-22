@@ -4,9 +4,8 @@ import threading
 
 websockets = set()
 event_handlers = {}
-to_channel_prefix = 'blorp:to:'
-back_channel_prefix = 'blorp:back:'
-all_channel = 'blorp:all'
+to_queue = 'blorp:to'
+back_queue = 'blorp:back'
 
 
 from blorp.loop import ResponderLoop

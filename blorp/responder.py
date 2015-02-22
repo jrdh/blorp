@@ -1,14 +1,13 @@
 import asyncio
 
 import blorp
-from blorp.utils import register, json_message, AsyncSender, channel_for
+from blorp.utils import register, json_message, AsyncSender
 
 
 class Responder:
 
-    def __init__(self, websocket_id, response_channel):
+    def __init__(self, websocket_id):
         self.websocket_id = websocket_id
-        self.response_channel = response_channel
 
     @asyncio.coroutine
     def on_disconnection(self):
@@ -17,11 +16,11 @@ class Responder:
     @register('json')
     @json_message
     def on_json(self, message, sender):
-        yield from sender.emit(self.response_channel, 'something', "why hello there from json")
+        yield from sender.emit(self.websocket_id, 'something', "why hello there from json")
 
     @register('string')
     def on_string(self, message, sender):
-        yield from sender.emit(self.response_channel, 'something', "why hello there from string")
+        yield from sender.emit(self.websocket_id, 'something', "why hello there from string")
 
     @register('toAll')
     def on_string(self, message, sender):
@@ -30,8 +29,8 @@ class Responder:
 
 class ResponderFactory:
 
-    def get_new_responder(self, websocket_id, response_channel):
-        return Responder(websocket_id, response_channel)
+    def get_new_responder(self, websocket_id):
+        return Responder(websocket_id)
 
 
 class ResponderRouter:
@@ -45,7 +44,7 @@ class ResponderRouter:
     @asyncio.coroutine
     def add_responder(self, websocket_id):
         blorp.websockets.add(websocket_id)
-        self.responders[websocket_id] = self.factory.get_new_responder(websocket_id, channel_for(websocket_id))
+        self.responders[websocket_id] = self.factory.get_new_responder(websocket_id)
 
     @asyncio.coroutine
     def remove_responder(self, websocket_id):
