@@ -5,7 +5,7 @@ import asyncio_redis
 import blorp
 
 
-class ResponderLoop:
+class WebsocketHandlerLoop:
 
     def __init__(self, router):
         self.router = router
@@ -21,8 +21,8 @@ class ResponderLoop:
         message_receiver = yield from asyncio_redis.Connection.create()
 
         message_handlers = {
-            'connection': lambda m: self.router.add_responder(m['websocketId']),
-            'disconnection': lambda m: self.router.remove_responder(m['websocketId']),
+            'connection': lambda m: self.router.add_websocket_handler(m['websocketId']),
+            'disconnection': lambda m: self.router.remove_websocket_handler(m['websocketId']),
             'message': lambda m: self.router.route(m['websocketId'], m['event'], m['data'])
         }
 
