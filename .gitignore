@@ -2,3 +2,5 @@
 *.iml
 node/node_modules/
 *.pyc
+bin
+lib
