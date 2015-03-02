@@ -1,6 +1,6 @@
 import asyncio
 
-import blorp
+from blorp import websockets
 from blorp.utils import AsyncSender
 
 
@@ -44,12 +44,12 @@ class BaseWebsocketHandlerRouter:
 
     @asyncio.coroutine
     def add_websocket_handler(self, websocket_id):
-        blorp.websockets.add(websocket_id)
+        websockets.add(websocket_id)
         self.websocket_handlers[websocket_id] = yield from self.factory.get_new_websocket_handler(websocket_id)
 
     @asyncio.coroutine
     def remove_websocket_handler(self, websocket_id):
-        blorp.websockets.discard(websocket_id)
+        websockets.discard(websocket_id)
         if websocket_id in self.websocket_handlers:
             yield from self.websocket_handlers[websocket_id].on_disconnection()
             del self.websocket_handlers[websocket_id]

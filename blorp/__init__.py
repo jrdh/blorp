@@ -2,13 +2,12 @@ import asyncio
 import threading
 import inspect
 
-from blorp.loop import WebsocketHandlerLoop
-from blorp.handler import BaseWebsocketHandler, BaseWebsocketHandlerFactory, BaseWebsocketHandlerRouter
-
-
 websockets = set()
 to_queue = 'blorp:to'
 back_queue = 'blorp:back'
+
+from blorp.loop import WebsocketHandlerLoop
+from blorp.handler import BaseWebsocketHandler, BaseWebsocketHandlerFactory, BaseWebsocketHandlerRouter
 
 
 def start(responder_cls=BaseWebsocketHandler, factory_cls=BaseWebsocketHandlerFactory,

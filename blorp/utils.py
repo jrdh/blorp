@@ -5,7 +5,7 @@ import asyncio_redis
 import redis
 import anyjson as json
 
-import blorp
+from blorp import back_queue
 
 
 blocking_redis = redis.StrictRedis()
@@ -40,7 +40,7 @@ def create_message(to, event, data):
 
 
 def emit(to, event, data):
-    blocking_redis.rpush(blorp.back_queue, create_message(to, event, data))
+    blocking_redis.rpush(back_queue, create_message(to, event, data))
 
 
 def emit_to_all(event, data):
@@ -61,7 +61,7 @@ class AsyncSender:
 
     @asyncio.coroutine
     def emit(self, to, event, data):
-        yield from self.message_sender.rpush(blorp.back_queue, [create_message(to, event, data)])
+        yield from self.message_sender.rpush(back_queue, [create_message(to, event, data)])
 
     @asyncio.coroutine
     def emit_to_all(self, event, data):
