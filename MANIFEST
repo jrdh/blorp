@@ -7,5 +7,6 @@ setup.py
 blorp/__init__.py
 blorp/handler.py
 blorp/loop.py
+blorp/session.py
 blorp/utils.py
 docs/doc.txt
