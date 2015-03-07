@@ -10,7 +10,7 @@ def create_message(to, event, data):
 
 
 def sync(to, event, data):
-    pool.sync_pool.rpush(back_queue, create_message(to, event, data))
+    pool.sync.rpush(back_queue, create_message(to, event, data))
 
 
 def sync_to_all(event, data):
@@ -19,7 +19,7 @@ def sync_to_all(event, data):
 
 @asyncio.coroutine
 def async(to, event, data):
-    yield from pool.async_pool.rpush(back_queue, [create_message(to, event, data)])
+    yield from pool.async.rpush(back_queue, [create_message(to, event, data)])
 
 
 @asyncio.coroutine
