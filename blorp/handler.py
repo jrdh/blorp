@@ -1,6 +1,5 @@
 import asyncio
 
-from blorp.utils import AsyncSender
 from blorp.session import get_session, delete_session
 
 
@@ -14,8 +13,8 @@ class BaseWebsocketHandler:
     @asyncio.coroutine
     def on_connection(self):
         while self.go:
-            message_handler, data, async_sender = yield from self.message_queue.get()
-            yield from message_handler(self, data, async_sender)
+            message_handler, data = yield from self.message_queue.get()
+            yield from message_handler(self, data)
 
     @asyncio.coroutine
     def on_disconnection(self):
@@ -44,7 +43,7 @@ class BaseWebsocketHandlerRouter:
 
     @asyncio.coroutine
     def add_websocket_handler(self, websocket_id):
-        get_session(websocket_id, create=True)
+        yield from get_session(websocket_id, create=True)
         self.websocket_handlers[websocket_id] = yield from self.factory.get_new_websocket_handler(websocket_id)
 
     @asyncio.coroutine
@@ -56,22 +55,15 @@ class BaseWebsocketHandlerRouter:
 
     @asyncio.coroutine
     def route(self, websocket_id, event, data):
-        if not self.async_sender:
-            self.async_sender = yield from AsyncSender.create()
         for regex, on_message_function in self.message_handlers:
-            if regex.match(event):
-                if websocket_id not in self.websocket_handlers:
-                    yield from self.add_websocket_handler(websocket_id)
+            if regex.match(event) and websocket_id in self.websocket_handlers:
                 websocket_handler = self.websocket_handlers[websocket_id]
                 # ensure there is a session for this websocket
                 yield from get_session(websocket_id)
                 if on_message_function.in_order:
                     # add to message queue for that websocket responder
-                    yield from websocket_handler.message_queue.put((on_message_function, data, self.async_sender))
+                    yield from websocket_handler.message_queue.put((on_message_function, data))
                 else:
                     # run responder immediately
-                    asyncio.async(on_message_function(websocket_handler, data, self.async_sender))
+                    asyncio.async(on_message_function(websocket_handler, data))
                 break
-
-    def close(self):
-        self.async_sender.close()
