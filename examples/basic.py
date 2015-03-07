@@ -3,6 +3,7 @@ import anyjson as json
 import blorp
 from blorp.utils import emit_to_all, on, json_message
 from blorp.handler import BaseWebsocketHandler
+from blorp.session import get_session, save_session
 
 
 class WebsocketHandler(BaseWebsocketHandler):
@@ -18,6 +19,9 @@ class WebsocketHandler(BaseWebsocketHandler):
 
     @on('string')
     def on_string(self, message, sender):
+        session = yield from get_session(self.websocket_id)
+        session['string_message_sent'] = True
+        yield from save_session(session)
         yield from sender.emit(self.websocket_id, 'something',
                                "you said {0}, I say 'hello {1}'".format(message, self.websocket_id))
 

@@ -3,6 +3,7 @@ import asyncio
 import anyjson as json
 import asyncio_redis
 import blorp
+from blorp import session
 
 
 class WebsocketHandlerLoop:
@@ -14,6 +15,7 @@ class WebsocketHandlerLoop:
 
     def start(self, event_loop=None):
         self.event_loop = event_loop
+        asyncio.async(session.init(), loop=self.event_loop)
         asyncio.async(self.message_loop(), loop=self.event_loop)
 
     @asyncio.coroutine

@@ -1,7 +1,7 @@
 import asyncio
 
-from blorp import websockets
 from blorp.utils import AsyncSender
+from blorp.session import get_session, delete_session
 
 
 class BaseWebsocketHandler:
@@ -44,14 +44,14 @@ class BaseWebsocketHandlerRouter:
 
     @asyncio.coroutine
     def add_websocket_handler(self, websocket_id):
-        websockets.add(websocket_id)
+        get_session(websocket_id, create=True)
         self.websocket_handlers[websocket_id] = yield from self.factory.get_new_websocket_handler(websocket_id)
 
     @asyncio.coroutine
     def remove_websocket_handler(self, websocket_id):
-        websockets.discard(websocket_id)
         if websocket_id in self.websocket_handlers:
             yield from self.websocket_handlers[websocket_id].on_disconnection()
+            yield from delete_session(websocket_id)
             del self.websocket_handlers[websocket_id]
 
     @asyncio.coroutine
@@ -59,8 +59,12 @@ class BaseWebsocketHandlerRouter:
         if not self.async_sender:
             self.async_sender = yield from AsyncSender.create()
         for regex, on_message_function in self.message_handlers:
-            if regex.match(event) and websocket_id in self.websocket_handlers:
+            if regex.match(event):
+                if websocket_id not in self.websocket_handlers:
+                    yield from self.add_websocket_handler(websocket_id)
                 websocket_handler = self.websocket_handlers[websocket_id]
+                # ensure there is a session for this websocket
+                yield from get_session(websocket_id)
                 if on_message_function.in_order:
                     # add to message queue for that websocket responder
                     yield from websocket_handler.message_queue.put((on_message_function, data, self.async_sender))

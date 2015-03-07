@@ -3,9 +3,10 @@ A 'bridge' that allows socket.io websocket connections to be used from (currentl
 Uses redis and Python's asyncio module.
 
 ## Todo
+- redis connection pool
+- redis connection host and port settings
 - tidy (~)
 - tests
-- threadsafety of blorp.websockets set (in fact most of it)
 
 ## To think about...
-- work out how to do cope with load balancing (this is now way more possible with a queue rather than using redis' pubsub)
+- work out how to do cope with load balancing (almost there...)

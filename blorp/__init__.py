@@ -2,7 +2,6 @@ import asyncio
 import threading
 import inspect
 
-websockets = set()
 to_queue = 'blorp:to'
 back_queue = 'blorp:back'
 
