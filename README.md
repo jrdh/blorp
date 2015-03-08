@@ -3,8 +3,7 @@ A 'bridge' that allows socket.io websocket connections to be used from (currentl
 Uses redis and Python's asyncio module.
 
 ## Todo
-- redis connection pool
-- redis connection host and port settings
+- implement instance switching (i.e. when a python instance shuts down, move the messages to another one if there is one)
 - tidy (~)
 - tests
 
