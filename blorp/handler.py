@@ -78,7 +78,7 @@ class WebsocketReceiver:
 
     @asyncio.coroutine
     def message_loop(self):
-        message_receiver = yield from asyncio_redis.Connection.create()
+        message_receiver = yield from asyncio_redis.Connection.create(host=self.app.host, port=self.app.port)
 
         message_handlers = {
             'connection': lambda m: self.app.router.add_websocket_handler(m['websocketId']),
