@@ -1,11 +1,9 @@
 import asyncio
 
 import re
-import redis
 import anyjson as json
 
 
-blocking_redis = redis.StrictRedis()
 _handler_counter = 0
 
 
@@ -32,6 +30,5 @@ def json_message(on_message_function):
     return _wrapped_on_message_function
 
 
-@asyncio.coroutine
-def call_blocking(f, *args):
-    return (yield from asyncio.get_event_loop().run_in_executor(None, f, *args))
+def create_message(to, event, data):
+    return json.dumps({'id': to, 'event': event, 'data': data})

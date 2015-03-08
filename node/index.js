@@ -15,11 +15,14 @@ var sender = redis.createClient();
 var receiver = redis.createClient();
 
 
+appName = process.argv[2];
+
+
 //queue names
 var queues = {
-    queues: 'blorp:queues:',
-    back: 'blorp:back',
-    instances: 'blorp:instances'
+    queues: 'blorp:' + appName + ':queues:',
+    back: 'blorp:' + appName + ':out',
+    instances: 'blorp:' + appName + ':instances'
 };
 
 //message types
