@@ -1,9 +1,10 @@
 import asyncio
+import uuid
 
 import anyjson as json
 import asyncio_redis
 import blorp
-from blorp.pool import init_async_pool, init_sync_pool
+from blorp import pool
 
 
 class WebsocketHandlerLoop:
@@ -12,12 +13,23 @@ class WebsocketHandlerLoop:
         self.router = router
         self.run = True
         self.event_loop = None
+        self.instance_id = None
 
     def start(self, event_loop=None):
         self.event_loop = event_loop
-        init_sync_pool()
-        asyncio.async(init_async_pool(), loop=self.event_loop)
+        pool.init_sync_pool()
+        asyncio.async(pool.init_async_pool(), loop=self.event_loop)
         asyncio.async(self.message_loop(), loop=self.event_loop)
+        self.register()
+
+    def register(self):
+        attempts = 0
+        while attempts < 3:
+            potential_instance_id = uuid.uuid4()
+            if pool.sync.sadd('blorp:instances', potential_instance_id):
+                self.instance_id = potential_instance_id
+                return
+            attempts += 1
 
     @asyncio.coroutine
     def message_loop(self):
