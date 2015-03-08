@@ -1,3 +1,6 @@
+v0.2.0, 08/03/2015 -- Considerable refactoring to allow class based 'apps' and load balancing of websockets between
+                      the Python instances.
+
 v0.1.1, 07/03/2015 -- Sessions support added.
 
 v0.1.0, 02/03/2015 -- Initial release.
