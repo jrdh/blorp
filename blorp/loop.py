@@ -3,7 +3,6 @@ import uuid
 
 import anyjson as json
 import asyncio_redis
-import blorp
 from blorp import pool
 
 
@@ -42,8 +41,13 @@ class WebsocketHandlerLoop:
         }
 
         while self.run:
-            raw_message = yield from message_receiver.blpop([blorp.to_queue])
+            raw_message = yield from message_receiver.blpop(['blorp:queues:{0}'.format(self.instance_id)])
             message = json.loads(raw_message.value)
             yield from message_handlers[message['type']](message)
 
         message_receiver.close()
+
+    def close(self):
+        pool.sync.srem('blorp:instances', self.instance_id)
+        pool.async.close()
+        self.event_loop.call_soon_threadsafe(self.event_loop.stop)

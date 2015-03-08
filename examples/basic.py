@@ -38,4 +38,5 @@ if __name__ == '__main__':
         while True:
             emit.sync_to_all('something', input("Type something to say to the nice websockets: "))
     except KeyboardInterrupt as _:
+        blorp.stop()
         exit(0)

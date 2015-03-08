@@ -17,8 +17,9 @@ var receiver = redis.createClient();
 
 //queue names
 var queues = {
-    to: 'blorp:to',
+    queues: 'blorp:queues:',
     back: 'blorp:back',
+    instances: 'blorp:instances'
 };
 
 //message types
@@ -29,23 +30,41 @@ var types = {
 };
 
 
+var instanceMap = {};
+
+
 app.use(express.static(path.join(__dirname, 'static')));
 server.listen(3003);
 
 
+function getQueue(websocketId) {
+    return queues.queues + instanceMap[websocketId];
+}
+
 function connectClient(websocketId) {
-    sender.rpush(queues.to, JSON.stringify({'type': types.connection, 'websocketId': websocketId}));
+    sender.srandmember(queues.instances, function(err, data) {
+        instance_id = data;
+        if (instance_id) {
+            instanceMap[websocketId] = instance_id;
+            sender.rpush(getQueue(websocketId), JSON.stringify({'type': types.connection, 'websocketId': websocketId}));
+        } else {
+            console.log("No instances are available! :(");
+        }
+    });
 };
 
 function disconnectClient(websocketId) {
-    sender.rpush(queues.to, JSON.stringify({'type': types.disconnection, 'websocketId': websocketId}));
+    if (websocketId in instanceMap) {
+        sender.rpush(getQueue(websocketId), JSON.stringify({'type': types.disconnection, 'websocketId': websocketId}));
+        delete instanceMap[websocketId];
+    }
 };
 
 function sendMessage(websocketId, event, data) {
     if (typeof data === 'object') {
         data = JSON.stringify(data);
     }
-    sender.rpush(queues.to, JSON.stringify({'type': types.message, 'event': event, 'data': data, 'websocketId': websocketId}));
+    sender.rpush(getQueue(websocketId), JSON.stringify({'type': types.message, 'event': event, 'data': data, 'websocketId': websocketId}));
 };
 
 io.on('connection', function (socket) {
