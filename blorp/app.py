@@ -12,9 +12,9 @@ import redis
 
 class BlorpApp:
 
-    def __init__(self, name, host='localhost', port=6379, pool_size=10, handler_cls=blorp.BaseWebsocketHandler,
+    def __init__(self, namespace, host='localhost', port=6379, pool_size=10, handler_cls=blorp.BaseWebsocketHandler,
                  session_ttl=1800):
-        self.name = name
+        self.namespace = namespace
         self.host = host
         self.port = port
         self.pool_size = pool_size
@@ -29,7 +29,7 @@ class BlorpApp:
         self.async_pool = None
         self.sync_pool = None
         self.instance_id = None
-        self.key_prefix = 'blorp:{0}:{1}'.format(self.name, '{0}')
+        self.key_prefix = 'blorp:{0}:{1}'.format(self.namespace, '{0}')
         self.keys = {
             'session': self.key_prefix.format('sessions:{0}'),
             'out': self.key_prefix.format('out'),
@@ -55,7 +55,10 @@ class BlorpApp:
     def init_sync_pool(self):
         self.sync_pool = redis.StrictRedis(host=self.host, port=self.port)
 
-    def register(self):
+    def register_namespace(self):
+        self.sync_pool.sadd('blorp:namespaces', self.namespace)
+
+    def register_instance(self):
         attempts = 0
         while attempts < 3:
             potential_instance_id = uuid.uuid4()
@@ -70,6 +73,10 @@ class BlorpApp:
         self.init_handler_factory()
         self.init_handler_router()
         self.init_sync_pool()
+        
+        self.register_namespace()
+        self.register_instance()
+        
         self.receiver = blorp.WebsocketReceiver(self)
 
         self.event_loop = event_loop
@@ -78,7 +85,6 @@ class BlorpApp:
         asyncio.set_event_loop(self.event_loop)
 
         asyncio.async(self.init_async_pool(), loop=self.event_loop)
-        self.register()
         asyncio.async(self.receiver.message_loop(), loop=self.event_loop)
 
         self.event_loop.run_forever()
