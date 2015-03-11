@@ -1,22 +1,14 @@
-var express = require('express');
-var app = express();
-var server = require('http').Server(app);
-var io = require('socket.io')(server);
-var path = require('path');
+var config = require('./config.json');
 var redis = require("redis");
+var io = require('socket.io').listen(config.http.port, config.http.host);
 var io_middleware = require('socketio-wildcard')();
 var blorp = require('./blorp');
 
 io.use(io_middleware);
 
 
-var redis = redis.createClient();
+var redis = redis.createClient(config.redis.port, config.redis.host);
 var namespaces = {};
-
-
-app.use(express.static(path.join(__dirname, 'static')));
-server.listen(3003);
-
 
 redis.smembers('blorp:namespaces', function(err, members) {
     for (index in members) {
