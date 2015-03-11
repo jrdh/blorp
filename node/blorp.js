@@ -1,11 +1,14 @@
+var config = require('./config.json');
 var redis = require("redis");
 
 function BlorpApp(namespace, io) {
     this.namespace = namespace;
     this.io = io;
 
-    this.sender = redis.createClient();
-    this.receiver = redis.createClient();
+    this.sender = redis.createClient(config.redis.port, config.redis.host);
+    this.receiver = redis.createClient(config.redis.port, config.redis.host);
+    this.control = redis.createClient(config.redis.port, config.redis.host);
+
     this.queues = {
         queues: 'blorp:' + this.namespace + ':queues:',
         back: 'blorp:' + this.namespace + ':out',
