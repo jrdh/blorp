@@ -1,0 +1,20 @@
+instanceA			instanceB			instanceC					nodejs
+
+ws1-message1			ws3-message1			ws4-message1
+ws2-message1			ws3-message2
+ws1-message2
+ws1-message3
+ws2-message2
+
+
+
+
+
+strategy:
+
+1. stop reading messages from instance queue
+2. deal with all messages in local queues
+3. inform nodejs that we are going to shutdown and then shutdown
+~ in nodejs ~
+4. reassign all messages to new instance queues (should block any new messages being added to the instance queue that just went down)
+
