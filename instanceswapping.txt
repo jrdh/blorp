@@ -18,3 +18,20 @@ strategy:
 ~ in nodejs ~
 4. reassign all messages to new instance queues (should block any new messages being added to the instance queue that just went down)
 
+
+
+
+OR
+
+
+
+don't bother with that and rearchitect the system so that each websocket has it's own queue of in messages.
+Then create a lua script that:
+1. takes a prefix as an argument
+2. uses that prefix to retrieve all the keys under that prefix (i.e. all the websocket queues)
+3. blpop on all of those queues in a random order
+4. lock the queue we get a blpop from and return the message
+
+then once processing is complete we unlock that queue and call the lua script again
+
+Seems like this would be bad with a large number of websockets...
