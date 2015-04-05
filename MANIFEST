@@ -2,6 +2,7 @@
 CHANGES.txt
 LICENSE.txt
 README.md
+instanceswapping.txt
 requirements.txt
 setup.py
 blorp/__init__.py

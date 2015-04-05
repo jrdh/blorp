@@ -1,7 +1,8 @@
 {
   "http": {
     "port": 3003,
-    "host": "localhost"
+    "host": "localhost",
+    "path": "/blorp/socket.io"
   },
   "redis": {
     "port": 6379,
