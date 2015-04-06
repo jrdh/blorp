@@ -1,6 +1,3 @@
 .idea
 *.iml
-node/node_modules/
-*.pyc
-bin
-lib
+node_modules/
