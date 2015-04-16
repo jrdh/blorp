@@ -35,3 +35,32 @@ Then create a lua script that:
 then once processing is complete we unlock that queue and call the lua script again
 
 Seems like this would be bad with a large number of websockets...
+
+
+
+
+OR
+
+1. Node.js receives connect, creates a queue for that socket if necessary and adds the message to it
+2. Node.js then picks an instance and informs it of the existance of that queue
+3. The instance starts blpop on that queue and works through any messages
+
+then, either:
+
+4. Node.js receives a disconnect and adds it to the queue
+5. The instance receives the disconnect and stops listening
+
+or
+
+4. The instance disconnects, sending a message to node.js to inform it of its departure
+5. Node.js sends a new connect message to a different instance and that then starts listening to the queue
+
+
+
+Problems:
+1. What happens if an instance disconnects unexpectantly
+2. How do you know when an instance has fully stopped working a queue
+
+Possible solution to both of these is a heartbeat? Instances keep node.js informed of their existance and if they disappear then it switches the queues off them.
+Maybe use another set for heartbeats? Use a set of instance IDs and the 'heartbeat' is that each instance makes sure it's in that set every x seconds.
+Then every x seconds node.js will check that set against the instance set and remove the diff? ME NO KNOW.

@@ -1,5 +1,5 @@
 var config = require('./config.json');
-var redis = require("redis");
+var redis = require("redis").createClient(config.redis.port, config.redis.host);
 var app = require('express')();
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
@@ -8,7 +8,6 @@ var blorp = require('./blorp');
 
 io.use(io_middleware);
 
-var redis = redis.createClient(config.redis.port, config.redis.host);
 var namespaces = {};
 
 redis.smembers('blorp:namespaces', function(err, members) {

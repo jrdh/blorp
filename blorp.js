@@ -7,7 +7,6 @@ function BlorpApp(namespace, io) {
 
     this.sender = redis.createClient(config.redis.port, config.redis.host);
     this.receiver = redis.createClient(config.redis.port, config.redis.host);
-    this.control = redis.createClient(config.redis.port, config.redis.host);
 
     this.queues = {
         queues: 'blorp:' + this.namespace + ':queues:',
