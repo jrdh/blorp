@@ -64,3 +64,9 @@ Problems:
 Possible solution to both of these is a heartbeat? Instances keep node.js informed of their existance and if they disappear then it switches the queues off them.
 Maybe use another set for heartbeats? Use a set of instance IDs and the 'heartbeat' is that each instance makes sure it's in that set every x seconds.
 Then every x seconds node.js will check that set against the instance set and remove the diff? ME NO KNOW.
+
+
+blorp:<namespace>:clients:<websocket>           - queue of messages from the clients (node -> instance)
+blorp:<namespace>:out                           - queue of messages to be sent to the clients (instance -> node)
+blorp:<namespace>:instances                     - set of connected instances (updated with heartbeats from the instances, trimmed by node)
+blorp:<namespace>:control:<instance>            - queue of messages for the instance from node (such as connections)
