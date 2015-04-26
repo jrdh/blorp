@@ -1,33 +1,30 @@
 var redis = require("redis");
+var io_middleware = require('socketio-wildcard')();
 
 function App(name, settings, io) {
     this.name = name;
     this.io = io;
+    this.io.use(io_middleware);
     this.settings = settings;
 
     this.keys = {
-        websockets: 'blorp:' + this.name + ':websockets',
+        control: 'blorp:' + this.name + ':control',
         messages: 'blorp:' + this.name + ':messages:',
         out: 'blorp:' + this.name + ':out'
     };
-    this.messages = {connection: 'connection', disconnection: 'disconnection', message: 'message'};
+    this.messages = {disconnection: 'disconnection', message: 'message'};
 
-    this.io.on('connection', this.onClientConnection);
+    var self = this;
+    this.io.on('connection', function(socket) {
+        self.connectClient.apply(self, [socket]);
+    });
 }
 
 App.prototype.send = function(websocketId, type, message) {
-    var queue = this.keys.messages + websocketId;
-    //ensure required attributes of message
-    message['type'] = type;
-    message['websocketId'] = websocketId;
-    this.sender.rpush(queue, JSON.stringify(message));
+    this.sender.rpush(this.keys.messages + websocketId, JSON.stringify({'type': type, 'message': message}));
 };
 
-App.prototype.sendConnection = function(websocketId) {
-    this.send(websocketId, this.messages.connection, {});
-};
-
-App.prototype.sendDisonnection = function(websocketId) {
+App.prototype.sendDisconnection = function(websocketId) {
     this.send(websocketId, this.messages.disconnection, {});
 };
 
@@ -35,26 +32,20 @@ App.prototype.sendMessage = function(websocketId, message) {
     this.send(websocketId, this.messages.message, message);
 };
 
-App.prototype.onClientConnection = function(socket) {
-    this.connectClient(socket.conn.id);
+App.prototype.sendControl = function(websocketId, action) {
+    this.sender.rpush(this.keys.control, JSON.stringify({'action': action, 'websocketId': websocketId}));
 };
 
-App.prototype.connectClient = function(websocketId) {
+App.prototype.connectClient = function(socket) {
+    var websocketId = socket.conn.id;
     var self = this;
 
-    //add the websocket to the websockets zset
-    this.sender.zadd(this.keys.websockets, -1, websocketId, function(err, result) {
-        if (err !== null) {
-            //TODO: something with errors
-        }
-    });
-
-    //push a connection message to this websocket's messages queue
-    this.sendConnection(websocketId);
+    //add a connection message to the control queue for this websocket
+    this.sendControl(websocketId, 'connection');
 
     //listen for any messages from the websocket and forward them onto redis
     socket.on('*', function (message) {
-        self.forwardMessage(websocketId, message.data[0], message.data[1]);
+        self.sendMessage(websocketId, {'event': message.data[0], 'data': message.data[1]});
     });
 
     //disconnect the client when they disconnect
@@ -64,18 +55,7 @@ App.prototype.connectClient = function(websocketId) {
 };
 
 App.prototype.disconnectClient = function(websocketId) {
-    var self = this;
-    this.sender.zrem(this.keys.websockets, websocketId, function(err, result) {
-        if (err === null && result == 1) {
-            self.sendDisonnection(websocketId);
-        } else {
-            //TODO: something with errors
-        }
-    });
-};
-
-App.prototype.forwardMessage = function(websocketId, event, data) {
-    self.sendMessage(websocketId, {'event': event, 'data': data});
+    this.sendDisconnection(websocketId);
 };
 
 App.prototype.start = function() {
@@ -87,7 +67,9 @@ App.prototype.start = function() {
     self.sender.select(self.settings.database, function (senderErr, senderRes) {
         self.receiver.select(self.settings.database, function (receiverErr, receiverRes) {
             if (senderErr === null || receiverErr === null) {
-                self.listen();
+                process.nextTick(function() {
+                    self.listen();
+                });
             } else {
                 //TODO: something with errors
             }
@@ -101,7 +83,7 @@ App.prototype.listen = function() {
         var message = JSON.parse(data[1]);
         var websocketId = message['id'];
         if (websocketId) {
-            var sock = self.io.sockets.connected[websocketId];
+            var sock = self.io.connected[websocketId];
             if (sock) {
                 sock.emit(message['event'], message['data']);
             } else {

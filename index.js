@@ -3,10 +3,7 @@ var _ = require('underscore');
 var app = require('express')();
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
-var io_middleware = require('socketio-wildcard')();
 var blorp = require('./blorp');
-
-io.use(io_middleware);
 
 var apps = {};
 
