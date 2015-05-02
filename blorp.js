@@ -1,80 +1,93 @@
-var config = require('./config.json');
 var redis = require("redis");
+var io_middleware = require('socketio-wildcard')();
 
-function BlorpApp(namespace, io) {
-    this.namespace = namespace;
+function App(name, settings, io) {
+    this.name = name;
     this.io = io;
+    this.io.use(io_middleware);
+    this.settings = settings;
 
-    this.sender = redis.createClient(config.redis.port, config.redis.host);
-    this.receiver = redis.createClient(config.redis.port, config.redis.host);
-
-    this.queues = {
-        queues: 'blorp:' + this.namespace + ':queues:',
-        back: 'blorp:' + this.namespace + ':out',
-        instances: 'blorp:' + this.namespace + ':instances'
+    this.keys = {
+        control: 'blorp:' + this.name + ':control',
+        messages: 'blorp:' + this.name + ':messages:',
+        out: 'blorp:' + this.name + ':out'
     };
-    this.types = {connection: 'connection', disconnection: 'disconnection', message: 'message'};
-    this.instanceMap = {};
+    this.messages = {disconnection: 'disconnection', message: 'message'};
 
     var self = this;
-    this.io.on('connection', function (socket) {
-        var id = socket.conn.id;
-
-        self.connectClient(id);
-
-        socket.on('*', function (message) {
-            self.sendMessage(id, message.data[0], message.data[1]);
-        });
-
-        socket.on('disconnect', function(){
-            self.disconnectClient(id);
-        });
+    this.io.on('connection', function(socket) {
+        self.connectClient.apply(self, [socket]);
     });
 }
 
-BlorpApp.prototype.getQueue = function(websocketId) {
-    return this.queues.queues + this.instanceMap[websocketId];
+App.prototype.send = function(websocketId, type, message) {
+    this.sender.rpush(this.keys.messages + websocketId, JSON.stringify({'type': type, 'message': message}));
 };
 
-BlorpApp.prototype.connectClient = function(websocketId) {
+App.prototype.sendDisconnection = function(websocketId) {
+    this.send(websocketId, this.messages.disconnection, {});
+};
+
+App.prototype.sendMessage = function(websocketId, message) {
+    this.send(websocketId, this.messages.message, message);
+};
+
+App.prototype.sendControl = function(websocketId, action) {
+    this.sender.rpush(this.keys.control, JSON.stringify({'action': action, 'websocketId': websocketId}));
+};
+
+App.prototype.connectClient = function(socket) {
+    var websocketId = socket.conn.id;
     var self = this;
-    this.sender.srandmember(this.queues.instances, function(err, data) {
-        instance_id = data;
-        if (instance_id) {
-            self.instanceMap[websocketId] = instance_id;
-            self.sender.rpush(self.getQueue(websocketId), JSON.stringify({'type': self.types.connection, 'websocketId': websocketId}));
-        } else {
-            console.log("No instances are available! :(");
-        }
+
+    //add a connection message to the control queue for this websocket
+    this.sendControl(websocketId, 'connection');
+
+    //listen for any messages from the websocket and forward them onto redis
+    socket.on('*', function (message) {
+        self.sendMessage(websocketId, {'event': message.data[0], 'data': message.data[1]});
+    });
+
+    //disconnect the client when they disconnect
+    socket.on('disconnect', function(){
+        self.disconnectClient(websocketId);
     });
 };
 
-BlorpApp.prototype.disconnectClient = function(websocketId) {
-    if (websocketId in this.instanceMap) {
-        this.sender.rpush(this.getQueue(websocketId), JSON.stringify({'type': this.types.disconnection, 'websocketId': websocketId}));
-        delete this.instanceMap[websocketId];
-    }
+App.prototype.disconnectClient = function(websocketId) {
+    this.sendDisconnection(websocketId);
 };
 
-BlorpApp.prototype.sendMessage = function(websocketId, event, data) {
-    if (typeof data === 'object') {
-        data = JSON.stringify(data);
-    }
-    this.sender.rpush(this.getQueue(websocketId), JSON.stringify({'type': this.types.message, 'event': event, 'data': data, 'websocketId': websocketId}));
-};
-
-
-BlorpApp.prototype.listen = function() {
+App.prototype.start = function() {
     var self = this;
-    this.receiver.blpop(this.queues.back, 0, function(err, data) {
+
+    self.sender = redis.createClient(self.settings.port, self.settings.host);
+    self.receiver = redis.createClient(self.settings.port, self.settings.host);
+
+    self.sender.select(self.settings.database, function (senderErr, senderRes) {
+        self.receiver.select(self.settings.database, function (receiverErr, receiverRes) {
+            if (senderErr === null || receiverErr === null) {
+                process.nextTick(function() {
+                    self.listen();
+                });
+            } else {
+                //TODO: something with errors
+            }
+        });
+    });
+};
+
+App.prototype.listen = function() {
+    var self = this;
+    this.receiver.blpop(this.keys.out, 0, function(err, data) {
         var message = JSON.parse(data[1]);
-        var id = message['id'];
-        if (id) {
-            var sock = self.io.sockets.connected[id];
+        var websocketId = message['id'];
+        if (websocketId) {
+            var sock = self.io.connected[websocketId];
             if (sock) {
                 sock.emit(message['event'], message['data']);
             } else {
-                self.disconnectClient(id);
+                self.disconnectClient(websocketId);
             }
         } else {
             self.io.emit(message['event'], message['data']);
@@ -85,4 +98,4 @@ BlorpApp.prototype.listen = function() {
     });
 };
 
-module.exports = BlorpApp;
+module.exports = {App: App};
